@@ -1,0 +1,37 @@
+
+App + Engine 構成の Ridge app:
+- Engine の意味
+-- routing マネージャ
+--- → routing だけ1つのファイルに纏まっていれば Engine をいちいち見なくても App に飛んで開発できる
+-- filter
+--- → routing 設定に含まれる
+-- view への転送
+
+
+App にいれないもの
+- http に限定されるようなもの
+-- CLI から使わないもの
+
+
+Chord App の構成:
+
+* Router
+Ridge::Engine のようなもの
+Ridge::Engine は HTTP 専用だが、これはそうではない
+
+** Router::HTTP
++ HTTP::Engine → Chord::App への routing
++ View 起動
++ Response
+
+** Router::CLI
++ App::Options → Chord::App への routing
++ View 起動
++ 表示
+
+** Router::Test
+Chord::App のテスト
+
+* App
+
+* View
