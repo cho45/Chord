@@ -31,8 +31,8 @@ sub route ($;%) {
 }
 
 sub dispatch {
-	my ($self, $request, @opts) = @_;
-	my $path   = $request->path;
+	my ($self, $req, $res, @opts) = @_;
+	my $path   = $req->path;
 	my $params = {};
 	my $action;
 
@@ -46,29 +46,27 @@ sub dispatch {
 		}
 	}
 
-	my $req = $request;
 	$req->param(%$params);
-	my $res = HTTP::Engine::Response->new(status => 200);
-	$res->header("Content-Type" => "text/html");
-	if ($action) {
-		eval {
-			$action->($req, $res, @opts);
-		}; if ($@) {
-			$res->code(500);
-			$res->header("Content-Type" => "text/plain");
-			$res->content($@);
-		}
-	} else {
-		$res->code(404);
-		$res->content("Not Found");
-	}
-	$res;
+	$action ? $action->($req, $res, @opts) : undef;
 }
 
 sub process {
-	my ($self, $request, @opts) = @_;
+	my ($self, $req, @opts) = @_;
 
-	$self->dispatch($request, @opts);
+	my $res = HTTP::Engine::Response->new(status => 200);
+	$res->header("Content-Type" => "text/html");
+	eval {
+		unless ($self->dispatch($req, $res, @opts)) {
+			$res->code(404);
+			$res->content("Not Found");
+		}
+	}; if ($@) {
+		$res->code(500);
+		$res->header("Content-Type" => "text/plain");
+		$res->content($@);
+	}
+
+	$res;
 }
 
 sub run {
