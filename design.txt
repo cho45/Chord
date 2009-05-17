@@ -1,0 +1,52 @@
+
+thinking:
+- Router は肥大化しないか?
+-- OAuth, OpenID などはどうするのか?
+--- → 外部ライブラリにすべき部分
+
+
+Chord App の構成:
+
+* Router
+Ridge::Engine のようなもの
+Ridge::Engine は HTTP 専用だが、これはそうではない
+
+ルータはあくまでルータなのでアプリケーションロジックは書かない
+
+** Router::HTTP
++ HTTP::Engine → Chord::App への routing
++ View 起動
++ Response
+
+- 必要なデータおセットして app を起動
+- app からの例外をキャッチして処理する
+
+** Router::CLI
++ App::Options → Chord::App への routing
++ View 起動
++ 表示
+
+** Router::Test
+Chord::App のテスト
+
+* App
+アプリケーションロジック。
+モデルを操作してなんかする。http に非依存
+
+適度に例外を発生させる。
+
+* View
+
+
+
+* VS Ridge
+
+App + Engine 構成の Ridge app:
+- Engine の意味
+-- routing マネージャ
+--- → routing だけ1つのファイルに纏まっていれば Engine をいちいち見なくても App に飛んで開発できる
+-- filter
+--- → routing 設定に含まれる
+-- view への転送
+
+
