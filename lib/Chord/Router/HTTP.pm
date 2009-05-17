@@ -31,7 +31,7 @@ sub route ($;%) {
 }
 
 sub dispatch {
-	my ($self, $request) = @_;
+	my ($self, $request, @opts) = @_;
 	my $path   = $request->path;
 	my $params = {};
 	my $action;
@@ -52,7 +52,7 @@ sub dispatch {
 	$res->header("Content-Type" => "text/html");
 	if ($action) {
 		eval {
-			$action->($req, $res);
+			$action->($req, $res, @opts);
 		}; if ($@) {
 			$res->code(500);
 			$res->header("Content-Type" => "text/plain");
@@ -66,9 +66,9 @@ sub dispatch {
 }
 
 sub process {
-	my ($self, $request) = @_;
+	my ($self, $request, @opts) = @_;
 
-	$self->dispatch($request);
+	$self->dispatch($request, @opts);
 }
 
 sub run {
@@ -79,7 +79,7 @@ sub run {
 			module => 'ServerSimple',
 			args   => {
 				host => 'localhost',
-				port =>  3001,
+				port =>  3000,
 			},
 			request_handler => sub {
 				my $req = shift;

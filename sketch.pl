@@ -1,8 +1,12 @@
 #!/usr/bin/env perl
 package FooRouter;
+use Any::Moose;
 
 use Chord::Router::HTTP;
-use base qw(Chord::Router::HTTP);
+extends "Chord::Router::HTTP";
+
+use Data::Dumper;
+sub p ($) { warn Dumper shift };
 
 # define views
 use JSON::XS;
@@ -27,6 +31,19 @@ sub html ($%) {
 	$res->header("Content-Type" => "text/html");
 	$res->content($content);
 }
+
+# filter
+
+around "process" => sub {
+	my ($next, $class, @args) = @_;
+
+	my ($request) = @args;
+	$request->param(
+		user => $request->cookie('session_id')
+	);
+
+	$next->($class, @args);
+};
 
 # routing
 
