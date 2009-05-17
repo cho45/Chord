@@ -1,134 +1,78 @@
 #!/usr/bin/env perl
+package FooRouter;
 
-use strict;
-use warnings;
+use Chord::Router::HTTP;
+use base qw(Chord::Router::HTTP);
 
-use Data::Dumper;
-sub p ($) { warn Dumper shift }
+# define views
+use JSON::XS;
+sub json ($$) {
+	my ($res, $stash) = @_;
+	$res->header("Content-Type" => "application/json");
+	$res->content(encode_json($stash));
+}
 
-use Perl6::Say;
+use Text::MicroMason;
+sub html ($%) {
+	my ($res, $stash) = @_;
+	my $m  = Text::MicroMason->new(qw/ -SafeServerPages -AllowGlobals /);
+	$m->set_globals(map { ("\$$_", $stash->{$_}) } keys %$stash);
 
-package Chord::Engine;
-# Model を組み合せていろいろやるアプリケーションロジック部分
-# App 相当もの
+	my $content = $m->execute(text =>  q{
+		<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+		<title><%= $title %></title>
+		<p><%= $content %>
+	});
 
-package Chord::View;
+	$res->header("Content-Type" => "text/html");
+	$res->content($content);
+}
 
-package Chord::Router::HTTP;
-use Any::Moose;
+# routing
 
-our $routing = [];
-
-sub route ($;%) {
-	my ($path, %opts) = @_;
-	my $regexp  = "^$path\$";
-	my $capture = [];
-
-	$regexp =~ s{([:*])(\w+)}{
-		my $type = $1;
-		my $name = $2;
-		push @$capture, $name;
-		sprintf("(%s)",
-			$opts{$name} ||
-			(($type eq "*") ? ".*": "[^\/]+")
-		);
-	}ge;
-
-	push @$routing, {
-		%opts,
-		define  => $path,
-		regexp  => $regexp,
-		capture => $capture,
+route "/",
+	action => sub {
+		my ($req, $res) = @_;
+		html $res, {
+			title   => "Hello",
+			content => "Hello",
+		};
 	};
-}
 
-sub routing {
-	my ($class, $block) = @_;
+route "/my/*path",
+	action => sub {
+		my ($req, $res) = @_;
+		$res->code(302);
+		$res->header("Location" => sprintf("/foo/%s", $req->param("path")));
+	};
 
-	$block->();
-
-	use Data::Dumper;
-	warn Dumper $routing;
-}
-
-sub dispatch {
-	my ($self, $request) = @_;
-	my $path   = $request->path;
-	my $params = {};
-	my $action;
-
-	for my $route (@$routing) {
-		if (my @capture = ($path =~ $route->{regexp})) {
-			for my $name (@{ $route->{capture} }) {
-				$params->{$name} = shift @capture;
-			}
-			$action = $route->{action};
-			last;
-		}
-	}
-
-	$action or die "404 Not Found";
-
-#	use Data::Dumper;
-#	warn Dumper $params;
-#	warn Dumper $action;
-
-	my $req = $request;
-	$req->param(%$params);
-	my $res = HTTP::Engine::Response->new(status => 200);
-	$action->($req, $res);
-	$res;
-}
-
-sub process {
-	my ($self, $request) = @_;
-
-	$self->dispatch($request);
-}
-
-__PACKAGE__->routing(sub {
-	route "/",
-		action => sub {
-			my ($req, $res) = @_;
-			$res->content("Hello");
+route "/:author/", author => qr/[a-z][a-z0-9]{1,30}/,
+	action => sub {
+		my ($req, $res) = @_;
+		html $res, {
+			title   => "Hello",
+			content => sprintf("This is %s's page.", $req->param("author"))
 		};
+	};
 
-	route "/my/*path",
-		action => sub {
-			my ($req, $res) = @_;
-			$res->redirect("/user/" . $req->param("path"));
+route "/api/foo",
+	action => sub {
+		my ($req, $res) = @_;
+		json $res, {
+			foo => "bar"
 		};
+	};
 
-	route "/:author/", author => qr/[a-z][a-z0-9]{1,30}/,
-		action => sub {
-			my ($req, $res) = @_;
-			$res->content(sprintf("This is %s's page.", $req->param("author")));
-		}
-});
+route "/die",
+	action => sub {
+		die "Died";
+	};
 
 
-package main;
-use HTTP::Engine;
+__PACKAGE__->run;
 
-HTTP::Engine->new(
-	interface => {
-		module => 'ServerSimple',
-		args   => {
-			host => 'localhost',
-			port =>  3001,
-		},
-		request_handler => sub {
-			my $req = shift;
-
-			p $req->uri->path;
-
-			Chord::Router::HTTP->new->process($req);
-
-#			my $app = chord->engine("Index")->new();
-#			my $res = chord->view("MicroMason")->new->process( app => $app );
-
-		},
-	},
-)->run;
-
+__END__
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<title><%= title %></title>
+<p><%= content %>
 
