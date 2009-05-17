@@ -3,7 +3,12 @@ use Any::Moose;
 use HTTP::Engine;
 
 use Exporter::Lite;
-our @EXPORT = qw(route);
+our @EXPORT = qw(route GET POST PUT HEAD);
+
+sub GET  { "GET"  }
+sub POST { "POST" }
+sub PUT  { "PUT"  }
+sub HEAD { "HEAD" }
 
 our $routing = [];
 
@@ -33,10 +38,12 @@ sub route ($;%) {
 sub dispatch {
 	my ($self, $req, $res, @opts) = @_;
 	my $path   = $req->path;
+	my $method = uc $req->method;
 	my $params = {};
 	my $action;
 
 	for my $route (@$routing) {
+		next if $route->{method} && ($route->{method} ne $method);
 		if (my @capture = ($path =~ $route->{regexp})) {
 			for my $name (@{ $route->{capture} }) {
 				$params->{$name} = shift @capture;

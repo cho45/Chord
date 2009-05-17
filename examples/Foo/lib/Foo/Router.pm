@@ -69,6 +69,7 @@ route "/:author/", author => qr/[a-z][a-z0-9]{1,30}/,
 	};
 
 route "/api/foo",
+	method => POST,
 	action => sub {
 		my ($req, $res) = @_;
 		json $res, {
