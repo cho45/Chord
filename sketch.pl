@@ -35,6 +35,7 @@ sub route ($;%) {
 	}ge;
 
 	push @$routing, {
+		%opts,
 		define  => $path,
 		regexp  => $regexp,
 		capture => $capture,
@@ -51,58 +52,58 @@ sub routing {
 }
 
 sub dispatch {
-	my ($self, $path) = @_;
+	my ($self, $request) = @_;
+	my $path   = $request->path;
 	my $params = {};
-	my $found  = 0;
+	my $action;
 
 	for my $route (@$routing) {
 		if (my @capture = ($path =~ $route->{regexp})) {
 			for my $name (@{ $route->{capture} }) {
 				$params->{$name} = shift @capture;
 			}
-			$found = 1;
+			$action = $route->{action};
 			last;
 		}
 	}
 
-	if (!$found) {
-		die "404 Not Found";
-	}
+	$action or die "404 Not Found";
 
-	use Data::Dumper;
-	warn Dumper $params;
+#	use Data::Dumper;
+#	warn Dumper $params;
+#	warn Dumper $action;
+
+	my $req = $request;
+	$req->param(%$params);
+	my $res = HTTP::Engine::Response->new(status => 200);
+	$action->($req, $res);
+	$res;
 }
 
 sub process {
-	my ($self, $req) = @_;
+	my ($self, $request) = @_;
 
-	my $res = $self->dispatch($req->path);
+	$self->dispatch($request);
 }
 
-
-
 __PACKAGE__->routing(sub {
-	route "/index",
-		module => "Index";
+	route "/",
+		action => sub {
+			my ($req, $res) = @_;
+			$res->content("Hello");
+		};
 
 	route "/my/*path",
 		action => sub {
-			res->redirect("/user/");
+			my ($req, $res) = @_;
+			$res->redirect("/user/" . $req->param("path"));
 		};
 
-	route "/help/:foobar/*rest";
-
-	route "/:user/", user => qr/[a-z][a-z0-9]{1,30}/,
-		module => "User";
-
-	route "/:user/edit", user => qr/[a-z][a-z0-9]{1,30}/,
-		before => [qw/ Filter::RequireUser /],
-		after  => sub {
-			if (req->method eq 'POST') {
-				dispatch("");
-			}
-		},
-		module => "User::Edit";
+	route "/:author/", author => qr/[a-z][a-z0-9]{1,30}/,
+		action => sub {
+			my ($req, $res) = @_;
+			$res->content(sprintf("This is %s's page.", $req->param("author")));
+		}
 });
 
 
@@ -126,11 +127,6 @@ HTTP::Engine->new(
 #			my $app = chord->engine("Index")->new();
 #			my $res = chord->view("MicroMason")->new->process( app => $app );
 
-
-			return HTTP::Engine::Response->new(
-				status => 200,
-				body   => 'Hello, World',
-			);
 		},
 	},
 )->run;
