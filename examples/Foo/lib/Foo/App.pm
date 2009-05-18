@@ -4,11 +4,14 @@ use Any::Moose;
 use Exporter::Lite;
 our @EXPORT = qw/app throw/;
 
+use Foo::GlobalConfig;
+
 use Exception::Class (
 	"Foo::App::Exception",
 	"Foo::App::UserRequired"   => { isa => "Foo::App::Exception" },
 	"Foo::App::AuthorNotFound" => { isa => "Foo::App::Exception" }
 );
+
 
 has author_name => (
 	is => 'rw',
@@ -40,6 +43,11 @@ sub user {
 	{
 		name => "cho45"
 	};
+}
+
+use Hatena::API::Auth;
+sub auth_api {
+	Hatena::API::Auth->new(Foo::GlobalConfig->get('hatena_auth'));
 }
 
 1;

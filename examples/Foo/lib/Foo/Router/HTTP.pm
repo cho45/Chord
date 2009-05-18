@@ -1,4 +1,4 @@
-package Foo::Router;
+package Foo::Router::HTTP;
 use Any::Moose;
 
 use Chord::Router::HTTP;
@@ -30,9 +30,13 @@ around "dispatch" => sub {
 	eval {
 		$res = $next->($class, @args);
 	};
-	if (my $e = Exception::Class->caught('Foo::App::AuthorNotFound') ) {
+
+	my $e;
+	if      ($e = Exception::Class->caught('Foo::App::AuthorNotFound') ) {
 		$res->code(404);
 		$res->content(sprintf("%s is not found.", $e->error->{author}));
+	} elsif ($e = Exception::Class->caught) {
+		ref $e ? $e->rethrow : die $e;
 	}
 	$res;
 };
@@ -46,6 +50,21 @@ route "/",
 			title   => "Hello",
 			content => "Hello",
 		};
+	};
+
+route "/login",
+	action => sub {
+		my ($req, $res) = @_;
+		my $cert = $req->param("cert");
+		if (!$cert) {
+			$res->code(302);
+			$res->header("Location" => app->auth_api->uri_to_login);
+		} else {
+			my $user = app->auth_api->login($cert) or die "Couldn't login";
+			$res->code(302);
+			$res->header("Location" => "/");
+			warn $user->name;
+		}
 	};
 
 route "/my/*path",
@@ -75,11 +94,6 @@ route "/api/foo",
 		json $res, {
 			foo => "bar"
 		};
-	};
-
-route "/die",
-	action => sub {
-		die "Died";
 	};
 
 1;

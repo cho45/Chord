@@ -5,6 +5,8 @@ use HTTP::Engine;
 use Exporter::Lite;
 our @EXPORT = qw(route GET POST PUT HEAD);
 
+use Chord::GlobalConfig;
+
 sub GET  { "GET"  }
 sub POST { "POST" }
 sub PUT  { "PUT"  }
@@ -49,12 +51,19 @@ sub dispatch {
 				$params->{$name} = shift @capture;
 			}
 			$action = $route->{action};
+			Chord::GlobalConfig->log(debug => ["Request: %s %s", $method, $path]);
+			Chord::GlobalConfig->log(debug => ["Routing to: %s", $route->{define}]);
 			last;
 		}
 	}
 
 	$req->param(%$params);
-	$action ? $action->($req, $res, @opts) : undef;
+	if ($action) {
+		$action->($req, $res, @opts);
+		$res;
+	} else {
+		undef;
+	}
 }
 
 sub process {
