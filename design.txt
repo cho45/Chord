@@ -3,6 +3,7 @@ thinking:
 - Router は肥大化しないか?
 -- OAuth, OpenID などはどうするのか?
 --- → 外部ライブラリにすべき部分
+- logger がいちまち……
 
 
 Chord App の構成:
