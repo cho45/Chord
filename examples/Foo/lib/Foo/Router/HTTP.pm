@@ -61,9 +61,8 @@ route "/login",
 			$res->header("Location" => app->auth_api->uri_to_login);
 		} else {
 			my $user = app->auth_api->login($cert) or die "Couldn't login";
-			$res->code(302);
-			$res->header("Location" => "/");
-			warn $user->name;
+			$res->cookie(session_id => $user->session_id);
+			meta_redirect $res => "/";
 		}
 	};
 
@@ -71,7 +70,19 @@ route "/my/*path",
 	action => sub {
 		my ($req, $res) = @_;
 		$res->code(302);
-		$res->header("Location" => sprintf("/foo/%s", $req->param("path")));
+		if ($req->param('user')) {
+			$res->header("Location" => sprintf(
+				"/%s/%s",
+				$req->param('user')->name,
+				$req->param("path")
+			));
+		} else {
+			$res->header("Location" => sprintf(
+				"/login?return_to=/%s/%s",
+				$req->param('user')->name,
+				$req->param("path")
+			));
+		}
 	};
 
 route "/:author/", author => qr/[a-z][a-z0-9]{1,30}/,
@@ -81,10 +92,7 @@ route "/:author/", author => qr/[a-z][a-z0-9]{1,30}/,
 			author_name => $req->param("author")
 		);
 
-		html $res, {
-			title   => "Hello",
-			content => $app->message
-		};
+		html $res, { app => $app };
 	};
 
 route "/api/foo",

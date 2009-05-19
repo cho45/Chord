@@ -31,6 +31,10 @@ sub html ($%) {
 	$res->content($content);
 }
 
+sub redirect ($$) {
+	my ($res, $uri) = @_;
+}
+
 
 1;
 __END__
